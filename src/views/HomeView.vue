@@ -1,14 +1,16 @@
 <script setup>
 import { onMounted, ref, computed } from "vue";
+import { useSubtitlesComposable } from "@/composables/subtitlesComposable";
+import Cue from "@/components/Cue.vue";
+const { cuesHolder } = useSubtitlesComposable();
 // import Hls from "hls.js";
 const audioRef = ref();
-const isSelected = ref("1");
+const cues = ref([]);
+const cueList = computed(() => cues.value);
+const audioLoaded = ref(false);
 /*
 Methods
  */
-const audioLoaded = (event) => {
-  console.log("audio loaded: ", audioRef.value?.duration);
-};
 const loadHlsAudio = ({ streamingUrl }) => {
   if (Hls.isSupported()) {
     const hls = new Hls();
@@ -19,23 +21,16 @@ const loadHlsAudio = ({ streamingUrl }) => {
     hls.on(Hls.Events.MEDIA_ATTACHED, () => {
       console.log("media attached");
       hls.loadSource(streamingUrl);
+      for (let i = 0; i < audioRef.value.textTracks.length; i++) {
+        audioRef.value.textTracks[i].mode = "showing";
+        console.log("cuelist: ", audioRef.value.textTracks[i]);
+        console.log("index: ", i);
+        cues.value = audioRef.value.textTracks[i].cues;
+      }
     });
   }
-  audioRef.value.onplay = () => {
-    console.log(audioRef.value.textTracks[0].cues);
-    audioRef.value.textTracks[0].cues.map((cue) => {
-      cue.addEventListener("enter", (event) => {
-        isSelected.value = cue.id;
-      });
-    });
-    audioRef.value.textTracks[0].cues[2].addEventListener("enter", (event) => {
-      console.log("cue is showing");
-    });
-  };
-
   return "loadHlsAudio";
 };
-const cues = computed(() => audioRef?.value?.textTracks?.[0]?.cues || []);
 onMounted(async () => {
   loadHlsAudio({
     streamingUrl:
@@ -45,41 +40,38 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="container mx-auto">
-    <h1 class="text-2xl">Welcome</h1>
+  <div class="container px-4 mx-auto">
+    <h1 class="text-2xl my-4">Tonto</h1>
     <div class="flex">
-      <video ref="audioRef" controls crossorigin="anonymous" preload="metadata">
+      <audio
+        ref="audioRef"
+        controls
+        crossorigin="anonymous"
+        preload="metadata"
+        @loadedmetadata="audioLoaded = true"
+      >
         <track
           label="English"
           kind="subtitles"
           srclang="en"
-          src="/62568ade65e17e000f6c0900_1_static.mp4.vtt"
+          src="https://transcriptions-staging.cdn.gettonto.com/27jgIbd45RUcPbkalzT8joxa8Ue/62568ade65e17e000f6c0900/62568ade65e17e000f6c0900_1_static.mp4.vtt"
           default
         />
-      </video>
-      <!-- <audio
-        ref="audioRef"
-        preload="metadata"
-        controls
-        @loadedmetadata="audioLoaded"
-      ></audio> -->
+      </audio>
     </div>
-    <div class="flex flex-col">
-      <p
-        v-for="cue in cues"
-        :key="cue.id"
-        :class="{ 'font-bold': isSelected === cue.id }"
-      >
-        {{ cue.text }}
-      </p>
+    <div
+      v-if="audioLoaded"
+      ref="cuesHolder"
+      class="flex flex-col mt-8 h-[300px] overflow-y-scroll scroll-smooth"
+    >
+      <div v-for="cue in cueList" :key="cue.id" class="">
+        <Cue :cue="cue"></Cue>
+      </div>
     </div>
   </div>
 </template>
 <style>
-video::cue {
-  background-image: linear-gradient(to bottom, dimgray, lightgray);
-  color: papayawhip;
-  position: fixed;
-  top: 200px;
+::cue {
+  display: none;
 }
 </style>
