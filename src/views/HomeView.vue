@@ -21,6 +21,10 @@ const loadHlsAudio = ({ streamingUrl }) => {
     hls.on(Hls.Events.MEDIA_ATTACHED, () => {
       console.log("media attached");
       hls.loadSource(streamingUrl);
+    });
+
+    hls.on(Hls.Events.MANIFEST_LOADED, () => {
+      console.log("manifest loaded");
       for (let i = 0; i < audioRef.value.textTracks.length; i++) {
         audioRef.value.textTracks[i].mode = "showing";
         console.log("cuelist: ", audioRef.value.textTracks[i]);
@@ -60,7 +64,7 @@ onMounted(async () => {
       </audio>
     </div>
     <div
-      v-if="audioLoaded"
+      v-if="audioLoaded && cueList.length > 0"
       ref="cuesHolder"
       class="flex flex-col mt-8 h-[300px] overflow-y-scroll scroll-smooth"
     >
